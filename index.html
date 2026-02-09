@@ -93,6 +93,7 @@ a{color:#7eb8ff}
   <a href="https://willslawrence.github.io/thc-fleet-map-v2/" style="font-size:0.7rem;color:#7eb8ff;text-decoration:none;letter-spacing:1px;">→ Fleet Map</a>
   <div class="subtitle">The Helicopter Company</div>
   <div class="date" id="headerDate"></div>
+  <div id="sourceNote" style="font-size:0.6rem;color:#666;margin-top:2px;font-style:italic;"></div>
 </div>
 
 <div class="legend-bar">
@@ -189,6 +190,7 @@ const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON');
 const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF');
 
 document.getElementById('headerDate').textContent = `Roster Data: ${ROSTER.updated} • Today: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`;
+document.getElementById('sourceNote').textContent = 'Source: Official Duty Roster maintained by Matthias Klemp (DFO)';
 document.getElementById('summary').innerHTML = `
   <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
   <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
@@ -271,6 +273,25 @@ ROSTER.pilots.forEach(pilot => {
     block.className = 'rot-block ' + (mgmt ? 'mgmt-on' : (r.status === 'ON' ? 'on' : 'off'));
     block.style.left = pct(s) + '%';
     block.style.width = pct(e - s + 1) + '%';
+    block.style.overflow = 'hidden';
+    block.style.display = 'flex';
+    block.style.alignItems = 'center';
+    block.style.justifyContent = 'space-between';
+    block.style.padding = '0 3px';
+    block.style.fontSize = '7px';
+    block.style.color = 'rgba(255,255,255,0.5)';
+
+    const sDate = new Date(r.start);
+    const eDate = new Date(r.end);
+    const fmtD = d => d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    const startLabel = document.createElement('span');
+    startLabel.textContent = fmtD(sDate);
+    startLabel.style.whiteSpace = 'nowrap';
+    const endLabel = document.createElement('span');
+    endLabel.textContent = fmtD(eDate);
+    endLabel.style.whiteSpace = 'nowrap';
+    block.appendChild(startLabel);
+    block.appendChild(endLabel);
 
     // Click on rotation block -> show popup
     block.addEventListener('click', function(ev) {
