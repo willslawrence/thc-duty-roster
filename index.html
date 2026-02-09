@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H125 Duty Roster — The Helicopter Company</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,sans-serif;background:linear-gradient(135deg,#0a0a0a 0%,#1a1a2e 100%);color:#ddd;min-height:100vh}
+a{color:#7eb8ff}
+
+.header{padding:24px 28px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.header h1{font-size:1.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(90deg,#2ecc71,#3498db);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
+.header .subtitle{font-size:0.75rem;color:#888;letter-spacing:1px;text-transform:uppercase}
+.header .date{font-size:0.7rem;color:#555;margin-top:4px}
+
+.summary{display:flex;gap:12px;padding:16px 28px;flex-wrap:wrap}
+.summary-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;min-width:140px;flex:1}
+.summary-card h3{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px}
+.summary-card .count{font-size:1.8rem;font-weight:700}
+.summary-card .count.on{color:#2ecc71}
+.summary-card .count.off{color:#e74c3c}
+.summary-card .count.total{color:#3498db}
+.pilot-list{font-size:0.7rem;color:#aaa;margin-top:6px;line-height:1.6}
+
+.legend-bar{display:flex;gap:16px;padding:8px 28px 12px;font-size:0.7rem;color:#888;flex-wrap:wrap;align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:12px;height:12px;border-radius:2px}
+
+.timeline-wrap{padding:0 28px 40px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.timeline{position:relative;min-width:1200px}
+
+.month-row{display:flex;height:28px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1)}
+.month-label{position:absolute;font-size:0.65rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:1px}
+
+.pilot-row{display:flex;align-items:center;height:36px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.pilot-row:hover{background:rgba(255,255,255,0.02)}
+.pilot-info{width:180px;min-width:180px;padding-right:12px;display:flex;align-items:center;gap:8px;z-index:2}
+.pilot-num{font-size:0.65rem;color:#555;font-weight:600;min-width:28px;text-align:right}
+.pilot-name{font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.pilot-name:hover{text-decoration:underline}
+.pilot-row.management .pilot-name{color:#f1c40f;font-weight:700}
+.pilot-row.management .pilot-num{color:#f1c40f}
+
+.bar-area{flex:1;position:relative;height:100%}
+
+.rot-block{position:absolute;top:4px;height:28px;border-radius:3px;transition:opacity 0.2s;cursor:pointer}
+.rot-block:hover{opacity:0.8}
+.rot-block.on{background:rgba(46,204,113,0.35);border:1px solid rgba(46,204,113,0.5)}
+.rot-block.off{background:rgba(231,76,60,0.18);border:1px solid rgba(231,76,60,0.25)}
+.rot-block.mgmt-on{background:rgba(241,196,15,0.25);border:1px solid rgba(241,196,15,0.45)}
+
+.event-marker{position:absolute;top:6px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:700;color:#fff;pointer-events:none;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.8)}
+.event-bg{position:absolute;top:6px;height:24px;background:rgba(52,152,219,0.4);border-radius:2px;z-index:2}
+
+.today-line{position:absolute;top:0;bottom:0;width:2px;background:#f1c40f;z-index:10;pointer-events:none}
+.today-label{position:absolute;top:-22px;transform:translateX(-50%);font-size:0.6rem;color:#f1c40f;font-weight:600;white-space:nowrap}
+
+.month-grid-line{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.06);z-index:1}
+
+/* Popup styles */
+.popup-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:99}
+.popup{position:fixed;z-index:100;background:#1e1e2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-size:0.8rem;color:#ddd;max-width:320px;min-width:180px}
+.popup .popup-title{font-weight:700;font-size:0.85rem;margin-bottom:8px;color:#fff}
+.popup .popup-status{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:600;font-size:0.75rem;margin-bottom:4px}
+.popup .popup-status.on{background:rgba(46,204,113,0.3);color:#2ecc71}
+.popup .popup-status.off{background:rgba(231,76,60,0.3);color:#e74c3c}
+.popup .popup-date{color:#aaa;font-size:0.75rem}
+.popup .popup-field{margin-top:8px}
+.popup .popup-field-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:2px}
+.popup .popup-field-value{color:#ddd;font-size:0.78rem;line-height:1.5}
+
+::-webkit-scrollbar{height:6px;width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+
+@media(max-width:768px){
+  .header{padding:16px}
+  .summary{padding:12px 16px}
+  .legend-bar{padding:8px 16px}
+  .timeline-wrap{padding:0 16px 24px}
+  .pilot-info{width:120px;min-width:120px}
+  .pilot-name{font-size:0.65rem}
+  .timeline{min-width:900px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>H125 Duty Roster</h1>
+  <div class="subtitle">The Helicopter Company</div>
+  <div class="date" id="headerDate"></div>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="legend-bar">
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(46,204,113,0.5)"></div> ON Rotation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(231,76,60,0.3)"></div> OFF Rotation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(241,196,15,0.4)"></div> Management (Always ON)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(52,152,219,0.5)"></div> Event</div>
+  <div class="legend-item"><div style="width:2px;height:12px;background:#f1c40f"></div> Today</div>
+</div>
+
+<div class="timeline-wrap" id="timelineWrap">
+  <div class="timeline" id="timeline"></div>
+</div>
+
+<script>
+const PILOT_DATA = {
+  "Will Lawrence": { qualifications: ["Banner", "ELO 1", "ELO 2", "Film"], roles: ["Check Pilot", "UAM TRAINING", "REMS"], baseMonth: "October" },
+  "Marius Hertz": { qualifications: ["Survey", "ELO 1", "ELO 2"], roles: ["PAX"], baseMonth: "November" },
+  "Dan Munteanu": { qualifications: ["ELO 1", "ELO 2", "Survey"], roles: ["PAX"], baseMonth: "May" },
+  "David Schicht": { qualifications: ["ELO 1", "ELO 2", "Survey"], roles: ["REMS", "PAX"], baseMonth: "September" },
+  "Kevin Allen": { qualifications: ["ELO 1", "ELO 2", "Survey"], roles: ["REMS", "PAX"], baseMonth: "September" },
+  "Julio Bonet": { qualifications: ["ELO 1", "ELO 2", "Film", "Survey"], roles: ["PAX"], baseMonth: "August" },
+  "Matt O'Brien": { qualifications: ["ELO 1", "ELO 2", "Film"], roles: ["REMS"], baseMonth: "May" },
+  "Nathan Piper": { qualifications: ["ELO 1", "ELO 2"], roles: ["REMS"], baseMonth: "July" },
+  "David Leipsig": { qualifications: [], roles: ["REMS", "PAX"], baseMonth: "September" },
+  "Lisa Le Roux": { qualifications: ["ELO 1", "Film"], roles: ["REMS"], baseMonth: "November" },
+  "Iwona Redlinska": { qualifications: ["ELO 1", "Film"], roles: ["REMS"], baseMonth: "April" },
+  "Lindsay Pentz": { qualifications: ["Film"], roles: ["REMS"], baseMonth: "November" },
+  "Rohit Kaundinya": { qualifications: ["ELO 1", "ELO 2", "Survey"], roles: ["PAX"], baseMonth: "May" },
+  "Stephan Mayer": { qualifications: ["Film"], roles: ["Check Pilot", "UAM TRAINING", "REMS"], baseMonth: "December" },
+  "Matthias Klemp": { qualifications: [], roles: ["REMS", "DFO135"], baseMonth: "January" }
+};
+
+const ROSTER = {"year":2026,"updated":"2026-02-08","pilots":[{"number":"3","name":"Marius Hertz","rotations":[{"start":"2026-01-01","end":"2026-01-29","status":"ON"},{"start":"2026-01-30","end":"2026-03-12","status":"OFF"},{"start":"2026-03-13","end":"2026-04-23","status":"ON"},{"start":"2026-04-24","end":"2026-06-04","status":"OFF"},{"start":"2026-06-05","end":"2026-07-16","status":"ON"},{"start":"2026-07-17","end":"2026-08-27","status":"OFF"}],"events":[]},{"number":"4","name":"Dan Munteanu","rotations":[{"start":"2026-01-01","end":"2026-01-29","status":"OFF"},{"start":"2026-01-30","end":"2026-03-12","status":"ON"},{"start":"2026-03-13","end":"2026-04-23","status":"OFF"},{"start":"2026-04-24","end":"2026-06-04","status":"ON"},{"start":"2026-06-05","end":"2026-07-16","status":"OFF"},{"start":"2026-07-17","end":"2026-08-27","status":"ON"}],"events":[{"date":"2026-03-19","note":"1W"},{"date":"2026-08-28","note":"1W"}]},{"number":"5","name":"David Schicht","rotations":[{"start":"2026-01-01","end":"2026-01-26","status":"OFF"},{"start":"2026-01-27","end":"2026-03-09","status":"ON"},{"start":"2026-03-14","end":"2026-04-20","status":"OFF"},{"start":"2026-04-21","end":"2026-06-01","status":"ON"},{"start":"2026-06-02","end":"2026-07-13","status":"OFF"},{"start":"2026-07-14","end":"2026-08-24","status":"ON"}],"events":[{"date":"2026-01-29","note":"HR"},{"date":"2026-01-30","note":"HR"},{"date":"2026-01-31","note":"HR"},{"date":"2026-02-01","note":"HR"}]},{"number":"6","name":"Kevin Allen","rotations":[{"start":"2026-01-01","end":"2026-01-26","status":"ON"},{"start":"2026-01-27","end":"2026-03-09","status":"OFF"},{"start":"2026-03-10","end":"2026-04-20","status":"ON"},{"start":"2026-04-21","end":"2026-06-01","status":"OFF"},{"start":"2026-06-02","end":"2026-07-13","status":"ON"},{"start":"2026-07-14","end":"2026-08-24","status":"OFF"}],"events":[]},{"number":"7","name":"Julio Bonet","rotations":[{"start":"2026-01-01","end":"2026-01-18","status":"OFF"},{"start":"2026-01-19","end":"2026-03-01","status":"ON"},{"start":"2026-03-02","end":"2026-04-12","status":"OFF"},{"start":"2026-04-13","end":"2026-05-24","status":"ON"},{"start":"2026-05-25","end":"2026-07-06","status":"OFF"},{"start":"2026-07-07","end":"2026-08-17","status":"ON"}],"events":[{"date":"2026-01-25","note":"AUT"},{"date":"2026-01-26","note":"AUT"},{"date":"2026-01-27","note":"AUT"},{"date":"2026-01-28","note":"AUT"},{"date":"2026-01-29","note":"AUT"},{"date":"2026-01-30","note":"AUT"},{"date":"2026-01-31","note":"AUT"}]},{"number":"8","name":"Matt O'Brien","rotations":[{"start":"2026-01-01","end":"2026-01-28","status":"ON"},{"start":"2026-01-29","end":"2026-03-11","status":"OFF"},{"start":"2026-03-12","end":"2026-04-22","status":"ON"},{"start":"2026-04-23","end":"2026-06-03","status":"OFF"},{"start":"2026-06-04","end":"2026-07-15","status":"ON"},{"start":"2026-07-16","end":"2026-08-26","status":"OFF"}],"events":[{"date":"2026-01-01","note":"D"},{"date":"2026-01-02","note":"D"},{"date":"2026-01-03","note":"D"},{"date":"2026-01-04","note":"D"},{"date":"2026-01-05","note":"D"},{"date":"2026-01-06","note":"D"},{"date":"2026-01-07","note":"D"},{"date":"2026-01-08","note":"D"},{"date":"2026-01-09","note":"D"},{"date":"2026-01-10","note":"D"},{"date":"2026-01-11","note":"D"},{"date":"2026-01-12","note":"D"},{"date":"2026-01-13","note":"D"},{"date":"2026-01-14","note":"D"},{"date":"2026-01-15","note":"D"},{"date":"2026-01-16","note":"D"},{"date":"2026-01-17","note":"D"},{"date":"2026-01-18","note":"D"}]},{"number":"9","name":"Nathan Piper","rotations":[{"start":"2026-01-01","end":"2026-01-06","status":"ON"},{"start":"2026-01-19","end":"2026-02-17","status":"OFF"},{"start":"2026-02-18","end":"2026-03-31","status":"ON"},{"start":"2026-04-01","end":"2026-05-12","status":"OFF"},{"start":"2026-05-13","end":"2026-06-23","status":"ON"},{"start":"2026-06-24","end":"2026-08-04","status":"OFF"},{"start":"2026-08-05","end":"2026-09-15","status":"ON"}],"events":[{"date":"2026-01-01","note":"D"},{"date":"2026-01-02","note":"D"},{"date":"2026-01-03","note":"D"},{"date":"2026-01-04","note":"D"},{"date":"2026-01-05","note":"D"},{"date":"2026-01-06","note":"D"},{"date":"2026-01-07","note":"D"},{"date":"2026-01-08","note":"D"},{"date":"2026-01-09","note":"D"},{"date":"2026-01-10","note":"D"},{"date":"2026-01-11","note":"D"},{"date":"2026-01-12","note":"D"},{"date":"2026-01-13","note":"D"},{"date":"2026-01-14","note":"D"},{"date":"2026-01-15","note":"D"},{"date":"2026-01-16","note":"D"},{"date":"2026-01-17","note":"D"},{"date":"2026-01-18","note":"D"}]},{"number":"10","name":"David Leipsig","rotations":[{"start":"2026-01-01","end":"2026-01-06","status":"OFF"},{"start":"2026-01-07","end":"2026-02-17","status":"ON"},{"start":"2026-02-18","end":"2026-03-31","status":"OFF"},{"start":"2026-04-01","end":"2026-05-12","status":"ON"},{"start":"2026-05-13","end":"2026-06-23","status":"OFF"},{"start":"2026-06-24","end":"2026-08-04","status":"ON"},{"start":"2026-08-05","end":"2026-09-15","status":"OFF"}],"events":[{"date":"2026-01-29","note":"HR"},{"date":"2026-01-30","note":"HR"},{"date":"2026-01-31","note":"HR"},{"date":"2026-02-01","note":"HR"}]},{"number":"11","name":"Lisa Le Roux","rotations":[{"start":"2026-01-01","end":"2026-01-27","status":"OFF"},{"start":"2026-01-28","end":"2026-03-10","status":"ON"},{"start":"2026-03-11","end":"2026-04-21","status":"OFF"},{"start":"2026-04-22","end":"2026-06-02","status":"ON"},{"start":"2026-06-03","end":"2026-07-14","status":"OFF"},{"start":"2026-07-15","end":"2026-08-25","status":"ON"}],"events":[{"date":"2026-01-23","note":"?"},{"date":"2026-02-06","note":"AF"},{"date":"2026-02-07","note":"AF"},{"date":"2026-02-08","note":"AF"}]},{"number":"12","name":"Iwona Redlinska","rotations":[{"start":"2026-01-01","end":"2026-01-11","status":"ON"},{"start":"2026-01-19","end":"2026-03-02","status":"OFF"},{"start":"2026-03-11","end":"2026-04-13","status":"ON"},{"start":"2026-04-22","end":"2026-06-02","status":"OFF"},{"start":"2026-06-03","end":"2026-07-14","status":"ON"},{"start":"2026-07-15","end":"2026-08-25","status":"OFF"}],"events":[{"date":"2026-01-01","note":"D"},{"date":"2026-01-02","note":"D"},{"date":"2026-01-03","note":"D"},{"date":"2026-01-04","note":"D"},{"date":"2026-01-05","note":"D"},{"date":"2026-01-06","note":"D"},{"date":"2026-01-07","note":"D"},{"date":"2026-01-08","note":"D"},{"date":"2026-01-09","note":"D"},{"date":"2026-01-10","note":"D"},{"date":"2026-01-11","note":"D"},{"date":"2026-01-12","note":"D"},{"date":"2026-01-13","note":"D"},{"date":"2026-01-14","note":"D"},{"date":"2026-01-15","note":"D"},{"date":"2026-01-16","note":"D"},{"date":"2026-01-17","note":"D"},{"date":"2026-01-18","note":"D"}]},{"number":"13","name":"Lindsay Pentz","rotations":[{"start":"2026-01-01","end":"2026-01-20","status":"ON"},{"start":"2026-01-21","end":"2026-03-03","status":"OFF"},{"start":"2026-03-04","end":"2026-04-14","status":"ON"},{"start":"2026-04-15","end":"2026-05-26","status":"OFF"},{"start":"2026-05-27","end":"2026-07-07","status":"ON"},{"start":"2026-07-08","end":"2026-08-18","status":"OFF"}],"events":[{"date":"2026-01-01","note":"D"},{"date":"2026-01-02","note":"D"},{"date":"2026-01-03","note":"D"},{"date":"2026-01-04","note":"D"},{"date":"2026-01-05","note":"D"},{"date":"2026-01-06","note":"D"},{"date":"2026-01-07","note":"D"},{"date":"2026-01-08","note":"D"},{"date":"2026-01-09","note":"D"},{"date":"2026-01-10","note":"D"},{"date":"2026-01-11","note":"D"},{"date":"2026-01-12","note":"D"},{"date":"2026-01-13","note":"D"},{"date":"2026-01-14","note":"D"},{"date":"2026-01-15","note":"D"},{"date":"2026-01-16","note":"D"},{"date":"2026-01-17","note":"D"},{"date":"2026-01-18","note":"D"}]},{"number":"14","name":"Rohit Kaundinya","rotations":[{"start":"2026-01-01","end":"2026-01-20","status":"OFF"},{"start":"2026-01-21","end":"2026-03-03","status":"ON"},{"start":"2026-03-04","end":"2026-04-14","status":"OFF"},{"start":"2026-04-15","end":"2026-05-26","status":"ON"},{"start":"2026-05-27","end":"2026-07-07","status":"OFF"},{"start":"2026-07-08","end":"2026-08-18","status":"ON"}],"events":[]},{"number":"15 CP","name":"Stephan Mayer","rotations":[{"start":"2026-01-01","end":"2026-02-08","status":"ON"},{"start":"2026-02-14","end":"2026-03-20","status":"OFF"},{"start":"2026-03-21","end":"2026-05-01","status":"ON"},{"start":"2026-05-02","end":"2026-06-05","status":"OFF"},{"start":"2026-06-13","end":"2026-06-26","status":"ON"},{"start":"2026-07-25","end":"2026-08-28","status":"OFF"},{"start":"2026-09-05","end":"2026-10-16","status":"ON"},{"start":"2026-10-17","end":"2026-11-20","status":"OFF"},{"start":"2026-11-28","end":"2026-12-31","status":"ON"}],"events":[{"date":"2026-01-01","note":"D b/u"},{"date":"2026-01-02","note":"D b/u"},{"date":"2026-01-03","note":"D b/u"},{"date":"2026-01-04","note":"D b/u"},{"date":"2026-01-05","note":"X"},{"date":"2026-01-06","note":"X"},{"date":"2026-01-07","note":"X"},{"date":"2026-01-08","note":"X"},{"date":"2026-01-09","note":"X"},{"date":"2026-01-10","note":"X"},{"date":"2026-01-11","note":"D b/u"},{"date":"2026-01-12","note":"D b/u"},{"date":"2026-01-13","note":"D b/u"},{"date":"2026-01-14","note":"D b/u"},{"date":"2026-01-15","note":"D b/u"},{"date":"2026-01-16","note":"D b/u"},{"date":"2026-01-17","note":"D b/u"},{"date":"2026-01-18","note":"D b/u"},{"date":"2026-01-29","note":"HR"},{"date":"2026-01-30","note":"HR"},{"date":"2026-01-31","note":"HR"},{"date":"2026-02-01","note":"HR"}]},{"number":"1&2","name":"Will Lawrence","rotations":[{"start":"2026-01-01","end":"2026-12-31","status":"ON"}],"events":[{"date":"2026-01-01","note":"D"},{"date":"2026-01-02","note":"D"},{"date":"2026-01-03","note":"D"},{"date":"2026-01-04","note":"D"},{"date":"2026-01-05","note":"D"},{"date":"2026-01-06","note":"D"},{"date":"2026-01-07","note":"D"},{"date":"2026-01-08","note":"D"},{"date":"2026-01-09","note":"D"},{"date":"2026-01-10","note":"D"},{"date":"2026-01-11","note":"D"},{"date":"2026-01-12","note":"D"},{"date":"2026-01-13","note":"D"},{"date":"2026-01-14","note":"D"},{"date":"2026-01-15","note":"D"},{"date":"2026-01-16","note":"D"},{"date":"2026-01-17","note":"D"},{"date":"2026-01-18","note":"D"},{"date":"2026-01-29","note":"HR"},{"date":"2026-01-30","note":"HR"},{"date":"2026-01-31","note":"HR"},{"date":"2026-02-01","note":"HR"}],"isManagement":true},{"number":"MK","name":"Matthias Klemp","role":"Director Flight OPS","rotations":[{"start":"2026-01-01","end":"2026-12-31","status":"ON"}],"events":[],"isManagement":true}]};
+
+const YEAR = ROSTER.year;
+const yearStart = new Date(YEAR, 0, 1);
+const yearEnd = new Date(YEAR, 11, 31);
+const totalDays = (yearEnd - yearStart) / 864e5 + 1;
+const today = new Date(2026, 1, 8);
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function dayOfYear(dateStr) {
+  const d = new Date(dateStr);
+  return Math.round((d - yearStart) / 864e5);
+}
+function pct(day) { return (day / totalDays) * 100; }
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function currentStatus(pilot) {
+  const todayStr = '2026-02-08';
+  for (const r of pilot.rotations) {
+    if (todayStr >= r.start && todayStr <= r.end) return r.status;
+  }
+  return 'UNKNOWN';
+}
+
+// Popup management
+function dismissPopup() {
+  const existing = document.querySelectorAll('.popup, .popup-overlay');
+  existing.forEach(el => el.remove());
+}
+
+function showPopup(x, y, html) {
+  dismissPopup();
+  const overlay = document.createElement('div');
+  overlay.className = 'popup-overlay';
+  overlay.addEventListener('click', dismissPopup);
+  document.body.appendChild(overlay);
+
+  const popup = document.createElement('div');
+  popup.className = 'popup';
+  popup.innerHTML = html;
+  document.body.appendChild(popup);
+
+  // Position: clamp to viewport
+  const rect = popup.getBoundingClientRect();
+  let left = Math.min(x, window.innerWidth - rect.width - 16);
+  let top = Math.min(y, window.innerHeight - rect.height - 16);
+  left = Math.max(8, left);
+  top = Math.max(8, top);
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
+// Summary
+const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON');
+const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF');
+
+document.getElementById('headerDate').textContent = `Updated: ${ROSTER.updated} • Today: 8 Feb 2026`;
+document.getElementById('summary').innerHTML = `
+  <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
+  <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
+  <div class="summary-card"><h3>Total Pilots</h3><div class="count total">${ROSTER.pilots.length}</div><div class="pilot-list">H125 Fleet</div></div>
+`;
+
+// Build timeline
+const timeline = document.getElementById('timeline');
+const todayDay = dayOfYear('2026-02-08');
+
+// Month headers
+let monthHTML = '<div class="pilot-row" style="height:28px;border-bottom:1px solid rgba(255,255,255,0.1)">';
+monthHTML += '<div class="pilot-info"></div><div class="bar-area" style="position:relative">';
+for (let m = 0; m < 12; m++) {
+  const mStart = dayOfYear(`${YEAR}-${String(m+1).padStart(2,'0')}-01`);
+  monthHTML += `<span class="month-label" style="left:${pct(mStart)}%">${months[m]}</span>`;
+  monthHTML += `<div class="month-grid-line" style="left:${pct(mStart)}%"></div>`;
+}
+monthHTML += `<div class="today-line" style="left:${pct(todayDay)}%"><div class="today-label">TODAY</div></div>`;
+monthHTML += '</div></div>';
+timeline.innerHTML = monthHTML;
+
+const isMgmt = pilot => pilot.isManagement;
+
+ROSTER.pilots.forEach(pilot => {
+  const mgmt = isMgmt(pilot);
+  const row = document.createElement('div');
+  row.className = 'pilot-row' + (mgmt ? ' management' : '');
+
+  const info = document.createElement('div');
+  info.className = 'pilot-info';
+
+  const numSpan = document.createElement('span');
+  numSpan.className = 'pilot-num';
+  numSpan.textContent = pilot.number;
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'pilot-name';
+  nameSpan.textContent = pilot.name;
+
+  // Click on pilot name -> show card
+  nameSpan.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const pd = PILOT_DATA[pilot.name];
+    if (!pd) return;
+    const quals = pd.qualifications.length ? pd.qualifications.join(', ') : '—';
+    const roles = pd.roles.length ? pd.roles.join(', ') : '—';
+    const bm = pd.baseMonth || '—';
+    const html = `
+      <div class="popup-title">${pilot.name}</div>
+      ${pilot.role ? '<div style="color:#888;font-size:0.7rem;margin-bottom:8px">' + pilot.role + '</div>' : ''}
+      <div class="popup-field"><div class="popup-field-label">Qualifications</div><div class="popup-field-value">${quals}</div></div>
+      <div class="popup-field"><div class="popup-field-label">Roles</div><div class="popup-field-value">${roles}</div></div>
+      <div class="popup-field"><div class="popup-field-label">Base Month</div><div class="popup-field-value">${bm}</div></div>
+    `;
+    showPopup(e.clientX + 8, e.clientY - 20, html);
+  });
+
+  info.appendChild(numSpan);
+  info.appendChild(nameSpan);
+  row.appendChild(info);
+
+  const bar = document.createElement('div');
+  bar.className = 'bar-area';
+  bar.style.position = 'relative';
+
+  for (let m = 0; m < 12; m++) {
+    const mStart = dayOfYear(`${YEAR}-${String(m+1).padStart(2,'0')}-01`);
+    const gl = document.createElement('div');
+    gl.className = 'month-grid-line';
+    gl.style.left = pct(mStart) + '%';
+    bar.appendChild(gl);
+  }
+
+  // Rotation blocks
+  pilot.rotations.forEach(r => {
+    const s = dayOfYear(r.start);
+    const e = dayOfYear(r.end);
+    const block = document.createElement('div');
+    block.className = 'rot-block ' + (mgmt ? 'mgmt-on' : (r.status === 'ON' ? 'on' : 'off'));
+    block.style.left = pct(s) + '%';
+    block.style.width = pct(e - s + 1) + '%';
+
+    // Click on rotation block -> show popup
+    block.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      const html = `
+        <div class="popup-status ${r.status.toLowerCase()}">${r.status}</div>
+        <div class="popup-date">${formatDate(r.start)} — ${formatDate(r.end)}</div>
+      `;
+      showPopup(ev.clientX + 8, ev.clientY - 20, html);
+    });
+
+    bar.appendChild(block);
+  });
+
+  // Events
+  if (pilot.events.length > 0) {
+    const groups = [];
+    let cur = null;
+    pilot.events.forEach(ev => {
+      if (cur && cur.note === ev.note && dayOfYear(ev.date) - dayOfYear(cur.endDate) <= 1) {
+        cur.endDate = ev.date;
+      } else {
+        if (cur) groups.push(cur);
+        cur = { note: ev.note, startDate: ev.date, endDate: ev.date };
+      }
+    });
+    if (cur) groups.push(cur);
+
+    groups.forEach(g => {
+      const s = dayOfYear(g.startDate);
+      const e = dayOfYear(g.endDate);
+      const span = e - s + 1;
+      const bg = document.createElement('div');
+      bg.className = 'event-bg';
+      bg.style.left = pct(s) + '%';
+      bg.style.width = pct(span) + '%';
+      bar.appendChild(bg);
+      const lbl = document.createElement('div');
+      lbl.className = 'event-marker';
+      lbl.style.left = pct(s) + '%';
+      lbl.style.width = pct(span) + '%';
+      lbl.textContent = g.note;
+      lbl.title = `${g.note}: ${g.startDate} → ${g.endDate}`;
+      bar.appendChild(lbl);
+    });
+  }
+
+  const tl = document.createElement('div');
+  tl.className = 'today-line';
+  tl.style.left = pct(todayDay) + '%';
+  bar.appendChild(tl);
+
+  row.appendChild(bar);
+  timeline.appendChild(row);
+});
+
+// Auto-scroll to today
+setTimeout(() => {
+  const wrap = document.getElementById('timelineWrap');
+  const timelineEl = document.getElementById('timeline');
+  const todayPx = (todayDay / totalDays) * timelineEl.offsetWidth;
+  wrap.scrollLeft = Math.max(0, todayPx - wrap.offsetWidth / 3);
+}, 100);
+</script>
+</body>
+</html>
