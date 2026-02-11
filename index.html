@@ -192,7 +192,7 @@ const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON');
 const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF');
 
 document.getElementById('headerDate').textContent = `Roster Data: ${ROSTER.updated} • Today: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`;
-document.getElementById('sourceNote').textContent = 'Source: Official Duty Roster maintained by Matthias Klemp (DFO)';
+document.getElementById('sourceNote').textContent = 'Source: H125 Duty Roster Spreadsheet updated by Matthias';
 document.getElementById('summary').innerHTML = `
   <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
   <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
