@@ -188,8 +188,8 @@ function showPopup(x, y, html) {
 }
 
 // Summary
-const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON');
-const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF');
+const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON' && !p.isManagement);
+const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF' && !p.isManagement);
 
 document.getElementById('headerDate').textContent = `Roster Data: ${ROSTER.updated} • Today: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`;
 document.getElementById('sourceNote').textContent = 'Source: H125 Duty Roster Spreadsheet updated by Matthias';
