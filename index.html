@@ -105,7 +105,7 @@ a{color:#7eb8ff}
   <div class="legend-item"><div class="legend-dot" style="background:rgba(231,76,60,0.3)"></div> OFF Rotation</div>
   <div class="legend-item"><div class="legend-dot" style="background:rgba(241,196,15,0.4)"></div> Management (Always ON)</div>
   <div class="legend-item"><div class="legend-dot" style="background:rgba(52,152,219,0.5)"></div> Event</div>
-  <div class="legend-item"><div style="width:2px;height:12px;background:#f1c40f"></div> Today</div>
+  <div class="legend-item"><div style="width:2px;height:12px;background:#f1c40f"></div> Selected Date (click to move)</div>
 </div>
 
 <div class="timeline-wrap" id="timelineWrap">
@@ -187,21 +187,50 @@ function showPopup(x, y, html) {
   popup.style.top = top + 'px';
 }
 
-// Summary
-const onPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'ON' && !p.isManagement);
-const offPilots = ROSTER.pilots.filter(p => currentStatus(p) === 'OFF' && !p.isManagement);
+// Selected date state (defaults to today)
+let selectedDate = new Date();
+selectedDate.setHours(0,0,0,0);
+
+function statusOnDate(pilot, date) {
+  const ds = date.toISOString().slice(0,10);
+  for (const r of pilot.rotations) {
+    if (ds >= r.start && ds <= r.end) return r.status;
+  }
+  return 'UNKNOWN';
+}
+
+function updateSummary(date) {
+  const dateStr = date.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+  const isToday = date.toDateString() === new Date().toDateString();
+  const label = isToday ? `Today — ${dateStr}` : dateStr;
+  const onPilots = ROSTER.pilots.filter(p => statusOnDate(p, date) === 'ON' && !p.isManagement);
+  const offPilots = ROSTER.pilots.filter(p => statusOnDate(p, date) === 'OFF' && !p.isManagement);
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
+    <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
+    <div class="summary-card"><h3>Total Pilots</h3><div class="count total">${ROSTER.pilots.length}</div><div class="pilot-list">${label}</div></div>
+  `;
+}
+
+function moveSelectedLine(dayNum) {
+  document.querySelectorAll('.selected-line').forEach(el => {
+    el.style.left = pct(dayNum) + '%';
+  });
+  document.querySelectorAll('.selected-label').forEach(el => {
+    const d = new Date(YEAR, 0, 1);
+    d.setDate(d.getDate() + dayNum);
+    const isToday = d.toDateString() === new Date().toDateString();
+    el.textContent = isToday ? 'TODAY' : d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+  });
+}
 
 document.getElementById('headerDate').textContent = `Roster Data: ${ROSTER.updated} • Today: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`;
 document.getElementById('sourceNote').textContent = 'Source: H125 Duty Roster Spreadsheet updated by Matthias';
-document.getElementById('summary').innerHTML = `
-  <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
-  <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
-  <div class="summary-card"><h3>Total Pilots</h3><div class="count total">${ROSTER.pilots.length}</div><div class="pilot-list">H125 Fleet</div></div>
-`;
+updateSummary(selectedDate);
 
 // Build timeline
 const timeline = document.getElementById('timeline');
-const todayDay = dayOfYear('2026-02-08');
+const todayDay = Math.round((today - yearStart) / 864e5);
 
 // Month headers
 let monthHTML = '<div class="pilot-row" style="height:28px;border-bottom:1px solid rgba(255,255,255,0.1)">';
@@ -211,9 +240,25 @@ for (let m = 0; m < 12; m++) {
   monthHTML += `<span class="month-label" style="left:${pct(mStart)}%">${months[m]}</span>`;
   monthHTML += `<div class="month-grid-line" style="left:${pct(mStart)}%"></div>`;
 }
-monthHTML += `<div class="today-line" style="left:${pct(todayDay)}%"><div class="today-label">TODAY</div></div>`;
+monthHTML += `<div class="today-line selected-line" style="left:${pct(todayDay)}%"><div class="today-label selected-label">TODAY</div></div>`;
 monthHTML += '</div></div>';
 timeline.innerHTML = monthHTML;
+
+// Click anywhere on timeline to move the date line
+timeline.addEventListener('click', function(e) {
+  // Find the bar-area element
+  const barArea = e.target.closest('.bar-area');
+  if (!barArea) return;
+  const rect = barArea.getBoundingClientRect();
+  const xPct = (e.clientX - rect.left) / rect.width;
+  const clickedDay = Math.round(xPct * totalDays);
+  const clickedDate = new Date(YEAR, 0, 1);
+  clickedDate.setDate(clickedDate.getDate() + clickedDay);
+  if (clickedDate < yearStart || clickedDate > yearEnd) return;
+  selectedDate = clickedDate;
+  moveSelectedLine(clickedDay);
+  updateSummary(selectedDate);
+});
 
 const isMgmt = pilot => pilot.isManagement;
 
@@ -232,24 +277,6 @@ ROSTER.pilots.forEach(pilot => {
   const nameSpan = document.createElement('span');
   nameSpan.className = 'pilot-name';
   nameSpan.textContent = pilot.name;
-
-  // Click on pilot name -> show card
-  nameSpan.addEventListener('click', function(e) {
-    e.stopPropagation();
-    const pd = PILOT_DATA[pilot.name];
-    if (!pd) return;
-    const quals = pd.qualifications.length ? pd.qualifications.join(', ') : '—';
-    const roles = pd.roles.length ? pd.roles.join(', ') : '—';
-    const bm = pd.baseMonth || '—';
-    const html = `
-      <div class="popup-title">${pilot.name}</div>
-      ${pilot.role ? '<div style="color:#888;font-size:0.7rem;margin-bottom:8px">' + pilot.role + '</div>' : ''}
-      <div class="popup-field"><div class="popup-field-label">Qualifications</div><div class="popup-field-value">${quals}</div></div>
-      <div class="popup-field"><div class="popup-field-label">Roles</div><div class="popup-field-value">${roles}</div></div>
-      <div class="popup-field"><div class="popup-field-label">Base Month</div><div class="popup-field-value">${bm}</div></div>
-    `;
-    showPopup(e.clientX + 8, e.clientY - 20, html);
-  });
 
   info.appendChild(numSpan);
   info.appendChild(nameSpan);
@@ -295,16 +322,7 @@ ROSTER.pilots.forEach(pilot => {
     block.appendChild(startLabel);
     block.appendChild(endLabel);
 
-    // Click on rotation block -> show popup
-    block.addEventListener('click', function(ev) {
-      ev.stopPropagation();
-      const html = `
-        <div class="popup-status ${r.status.toLowerCase()}">${r.status}</div>
-        <div class="popup-date">${formatDate(r.start)} — ${formatDate(r.end)}</div>
-      `;
-      showPopup(ev.clientX + 8, ev.clientY - 20, html);
-    });
-
+    block.style.pointerEvents = 'none';
     bar.appendChild(block);
   });
 
@@ -342,7 +360,7 @@ ROSTER.pilots.forEach(pilot => {
   }
 
   const tl = document.createElement('div');
-  tl.className = 'today-line';
+  tl.className = 'today-line selected-line';
   tl.style.left = pct(todayDay) + '%';
   bar.appendChild(tl);
 
