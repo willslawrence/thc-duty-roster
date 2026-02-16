@@ -278,6 +278,24 @@ ROSTER.pilots.forEach(pilot => {
   nameSpan.className = 'pilot-name';
   nameSpan.textContent = pilot.name;
 
+  nameSpan.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const data = PILOT_DATA[pilot.name];
+    const status = currentStatus(pilot);
+    const statusClass = status === 'ON' ? 'on' : 'off';
+    let html = `<div class="popup-title">${pilot.name}</div>`;
+    html += `<span class="popup-status ${statusClass}">${status}</span>`;
+    html += `<div class="popup-field"><div class="popup-field-label">Number</div><div class="popup-field-value">${pilot.number}</div></div>`;
+    if (pilot.role) html += `<div class="popup-field"><div class="popup-field-label">Position</div><div class="popup-field-value">${pilot.role}</div></div>`;
+    if (data) {
+      if (data.roles.length) html += `<div class="popup-field"><div class="popup-field-label">Roles</div><div class="popup-field-value">${data.roles.join(', ')}</div></div>`;
+      if (data.qualifications.length) html += `<div class="popup-field"><div class="popup-field-label">Qualifications</div><div class="popup-field-value">${data.qualifications.join(', ')}</div></div>`;
+      if (data.baseMonth) html += `<div class="popup-field"><div class="popup-field-label">Base Month</div><div class="popup-field-value">${data.baseMonth}</div></div>`;
+    }
+    if (pilot.isManagement) html += `<div class="popup-field"><div class="popup-field-label">Type</div><div class="popup-field-value">Management (Always ON)</div></div>`;
+    showPopup(e.clientX + 10, e.clientY - 10, html);
+  });
+
   info.appendChild(numSpan);
   info.appendChild(nameSpan);
   row.appendChild(info);
