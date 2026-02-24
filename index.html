@@ -223,12 +223,18 @@ function updateSummary(date) {
   const onUAMOnly = onPilots.filter(p => isUAM(p.name) && !isSurvey(p.name));
   const onBoth = onPilots.filter(p => isBoth(p.name));
   const onSurveyOnly = onPilots.filter(p => isSurvey(p.name) && !isUAM(p.name));
+  // Short name with last initial for duplicate first names (e.g. David S., David L.)
+  const allPilots = ROSTER.pilots;
+  const firstCount = {};
+  allPilots.forEach(p => { const f = p.name.split(' ')[0]; firstCount[f] = (firstCount[f]||0)+1; });
+  const shortName = p => { const parts = p.name.split(' '); return firstCount[parts[0]] > 1 && parts.length > 1 ? `${parts[0]} ${parts[parts.length-1][0]}.` : parts[0]; };
+
   document.getElementById('summary').innerHTML = `
-    <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
-    <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
-    <div class="summary-card"><h3>UAM Pilots</h3><div class="count" style="color:#4FC3F7">${onUAMOnly.length}</div><div class="pilot-list">${onUAMOnly.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
-    <div class="summary-card"><h3>UAM + Survey</h3><div class="count" style="color:#CE93D8">${onBoth.length}</div><div class="pilot-list">${onBoth.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
-    <div class="summary-card"><h3>Survey Pilots</h3><div class="count" style="color:#FFB74D">${onSurveyOnly.length}</div><div class="pilot-list">${onSurveyOnly.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
+    <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(shortName).join(', ')}</div></div>
+    <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(shortName).join(', ')}</div></div>
+    <div class="summary-card"><h3>UAM Pilots</h3><div class="count" style="color:#4FC3F7">${onUAMOnly.length}</div><div class="pilot-list">${onUAMOnly.map(shortName).join(', ') || 'none on'}</div></div>
+    <div class="summary-card"><h3>UAM + Survey</h3><div class="count" style="color:#CE93D8">${onBoth.length}</div><div class="pilot-list">${onBoth.map(shortName).join(', ') || 'none on'}</div></div>
+    <div class="summary-card"><h3>Survey Pilots</h3><div class="count" style="color:#FFB74D">${onSurveyOnly.length}</div><div class="pilot-list">${onSurveyOnly.map(shortName).join(', ') || 'none on'}</div></div>
   `;
 }
 
