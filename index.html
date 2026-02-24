@@ -263,8 +263,22 @@ let monthHTML = '<div class="pilot-row" style="height:28px;border-bottom:1px sol
 monthHTML += '<div class="pilot-info"></div><div class="bar-area" style="position:relative">';
 for (let m = 0; m < 12; m++) {
   const mStart = dayOfYear(`${YEAR}-${String(m+1).padStart(2,'0')}-01`);
+  const mEnd = m < 11 ? dayOfYear(`${YEAR}-${String(m+2).padStart(2,'0')}-01`) : totalDays;
+  // Alternating month background
+  if (m % 2 === 1) {
+    monthHTML += `<div style="position:absolute;top:0;bottom:0;left:${pct(mStart)}%;width:${pct(mEnd - mStart)}%;background:rgba(255,255,255,0.03);pointer-events:none;z-index:0"></div>`;
+  }
   monthHTML += `<span class="month-label" style="left:${pct(mStart)}%">${months[m]}</span>`;
   monthHTML += `<div class="month-grid-line" style="left:${pct(mStart)}%"></div>`;
+  // Weekly ticks within month
+  const mStartDate = new Date(YEAR, m, 1);
+  const mEndDate = m < 11 ? new Date(YEAR, m+1, 1) : new Date(YEAR+1, 0, 1);
+  for (let d = new Date(mStartDate); d < mEndDate; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() === 1 && d.getTime() !== mStartDate.getTime()) { // Monday, skip month start
+      const wd = Math.round((d - yearStart) / 864e5);
+      monthHTML += `<div style="position:absolute;top:20px;height:8px;width:1px;background:rgba(255,255,255,0.15);left:${pct(wd)}%;pointer-events:none"></div>`;
+    }
+  }
 }
 monthHTML += `<div class="today-line selected-line" style="left:${pct(todayDay)}%"><div class="today-label selected-label">TODAY</div></div>`;
 monthHTML += '</div></div>';
@@ -332,6 +346,12 @@ ROSTER.pilots.forEach(pilot => {
 
   for (let m = 0; m < 12; m++) {
     const mStart = dayOfYear(`${YEAR}-${String(m+1).padStart(2,'0')}-01`);
+    const mEnd = m < 11 ? dayOfYear(`${YEAR}-${String(m+2).padStart(2,'0')}-01`) : totalDays;
+    if (m % 2 === 1) {
+      const bg = document.createElement('div');
+      bg.style.cssText = `position:absolute;top:0;bottom:0;left:${pct(mStart)}%;width:${pct(mEnd - mStart)}%;background:rgba(255,255,255,0.03);pointer-events:none;z-index:0`;
+      bar.appendChild(bg);
+    }
     const gl = document.createElement('div');
     gl.className = 'month-grid-line';
     gl.style.left = pct(mStart) + '%';
