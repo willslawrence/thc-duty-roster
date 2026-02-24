@@ -199,16 +199,36 @@ function statusOnDate(pilot, date) {
   return 'UNKNOWN';
 }
 
+// Pilot qualifications
+const PILOT_QUALS = {
+  "Will Lawrence":["UAM"],"Nathan Piper":["UAM"],"David Leipsig":["UAM"],"Lisa Le Roux":["UAM"],
+  "Ivona Redlinska":["UAM"],"Lindsay Pentz":["UAM"],"Stephan Mayer":["UAM"],
+  "Rohit Kaundinya":["UAM","Survey"],"David Schicht":["UAM","Survey"],"Kevin Allen":["UAM","Survey"],
+  "Marius Hertz":["Survey"],"Dan Munteanu":["Survey"],"Julio Bonet":["Survey"],
+  "Matt O'Brien":["Survey"],"Roberto Piani":["Survey"],
+  "Matthias Klemp":[],"Gilles Plaisance":[]
+};
+function pQuals(name){return PILOT_QUALS[name]||[];}
+function isUAM(name){return pQuals(name).includes("UAM");}
+function isSurvey(name){return pQuals(name).includes("Survey");}
+function isBoth(name){return isUAM(name)&&isSurvey(name);}
+
 function updateSummary(date) {
   const dateStr = date.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
   const isToday = date.toDateString() === new Date().toDateString();
   const label = isToday ? `Today — ${dateStr}` : dateStr;
-  const onPilots = ROSTER.pilots.filter(p => statusOnDate(p, date) === 'ON' && !p.isManagement);
-  const offPilots = ROSTER.pilots.filter(p => statusOnDate(p, date) === 'OFF' && !p.isManagement);
+  const linePilots = ROSTER.pilots.filter(p => !p.isManagement);
+  const onPilots = linePilots.filter(p => statusOnDate(p, date) === 'ON');
+  const offPilots = linePilots.filter(p => statusOnDate(p, date) === 'OFF');
+  const onUAMOnly = onPilots.filter(p => isUAM(p.name) && !isSurvey(p.name));
+  const onBoth = onPilots.filter(p => isBoth(p.name));
+  const onSurveyOnly = onPilots.filter(p => isSurvey(p.name) && !isUAM(p.name));
   document.getElementById('summary').innerHTML = `
     <div class="summary-card"><h3>On Rotation</h3><div class="count on">${onPilots.length}</div><div class="pilot-list">${onPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
     <div class="summary-card"><h3>Off Rotation</h3><div class="count off">${offPilots.length}</div><div class="pilot-list">${offPilots.map(p => p.name.split(' ')[0]).join(', ')}</div></div>
-    <div class="summary-card"><h3>Total Pilots</h3><div class="count total">${ROSTER.pilots.length}</div><div class="pilot-list">${label}</div></div>
+    <div class="summary-card"><h3>UAM Pilots</h3><div class="count" style="color:#4FC3F7">${onUAMOnly.length}</div><div class="pilot-list">${onUAMOnly.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
+    <div class="summary-card"><h3>UAM + Survey</h3><div class="count" style="color:#CE93D8">${onBoth.length}</div><div class="pilot-list">${onBoth.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
+    <div class="summary-card"><h3>Survey Pilots</h3><div class="count" style="color:#FFB74D">${onSurveyOnly.length}</div><div class="pilot-list">${onSurveyOnly.map(p => p.name.split(' ')[0]).join(', ') || 'none on'}</div></div>
   `;
 }
 
